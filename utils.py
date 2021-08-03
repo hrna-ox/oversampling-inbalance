@@ -1,11 +1,22 @@
 import pandas as pd
 import numpy as np
 
-import tensorflow as tf
-from tensorflow.keras.layers import Dense
+
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score\
     , f1_score
+
+
+def _get_nrows_ncols(N):
+    if N==1:
+        nrows, ncols = 1, 1
+
+    else:
+        nrows = int(np.ceil(N//2))
+        ncols = 2
+
+    return nrows, ncols
+
 
 def _class_distribution(y):
     """

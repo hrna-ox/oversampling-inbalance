@@ -1,25 +1,36 @@
-import pandas as pd
-import numpy as np
-
 import os, sys
 import utils
 
-import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 import sklearn as skl
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier as KNN
-from sklearn.manifold import TSNE
-from utils import MLP
 
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
+# Import Imbalanced data section
 import imblearn as imbl
 from imblearn.datasets import fetch_datasets
 from imblearn.over_sampling import SMOTE, SMOTEN, SVMSMOTE, ADASYN
 
-# binary_datasets = fetch_datasets()
+# Load Models
+from sklearn.svm import SVC as SVM
+from sklearn.neighbors import KNeighborsClassifier as KNN
+from sklearn.tree import DecisionTreeClassifier as Tree
+from sklearn.linear_model import LogisticRegression as LogReg
+from sklearn.neural_network import MLPClassifier as MLP
 
+#%% List of models, datasets...
+# binary_datasets = fetch_datasets()
 glass_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/glass.csv'
 ecoli_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/ecoli.csv'
 thyroid_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/new-thyroid.csv'
+
+urls = [ecoli_url, thyroid_url, glass_url]
+overs_methods = [SMOTE, SMOTEN, SVMSMOTE, ADASYN]    #,  custom_SMOTE]
+models = [SVM, KNN, Tree, LogReg, MLP]
+
+
 
 # Try with ecoli first
 data = pd.read_csv(glass_url, header = None)
