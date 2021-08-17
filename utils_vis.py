@@ -1,6 +1,5 @@
-import pandas as pd
 import numpy as np
-from tqdm import tqdm
+import pandas as pd
 
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
@@ -61,10 +60,10 @@ class data_plotter():
             ax = plt.gca()
 
         # Compute num classes
-        num_classes_ = self._num_classes(y)
+        num_classes_ = self._compute_num_classes(y)
 
         # plot
-        for class_ in range(1, num_classes_ + 1):
+        for class_ in range(num_classes_):
 
             # Access data for the class
             X_class_ = X[self._get_class_ids(X, y, class_), :]
@@ -73,6 +72,12 @@ class data_plotter():
             ax.scatter(x_scatter, y_scatter, color = self.colors[class_], label = "Class {}".format(class_), **kwargs)
 
         return ax
+
+    def _get_class_ids(self, X, y, class_):
+        "Class ids given target labels y, class label and X data."
+        assert X.shape[0] == y.shape[0]
+
+        return y==class_
 
     def plot_compare_2_datasets(self, data1, data2, ax , **kwargs):
         """
@@ -96,19 +101,6 @@ class data_plotter():
 
         return np.divide(np.max(_counts / np.sum(_counts)), np.min(_counts / np.sum(_counts)))
 
-    def _compute_metadata(self, X, y):
-        "Attributes to compute: Data size, dimensionality, number of classes, measure of class inbalance - currently max - min"
-        data_size = X.shape[0]
-        dim_size  = X.shape[1]
-
-        # Compute class information
-        num_classes = self._compute_num_classes(y)
-        max_min_prop = self._compute_max_min_ratio(y)
-
-        # Return array with 4 characteristics
-        return np.array([data_size, dim_size, num_classes, max_min_prop])
-
-
     def _projection_method_from_string(self, projection_method_string):
         assert isinstance(projection_method_string, str)
 
@@ -123,6 +115,30 @@ class data_plotter():
             raise ValueError
 
         return method
+
+    def _compute_metadata(self, X, y):
+        "Attributes to compute: Data size, dimensionality, number of classes, measure of class inbalance - currently max - min"
+        data_size = X.shape[0]
+        dim_size = X.shape[1]
+
+        # Compute class information
+        num_classes = self._compute_num_classes(y)
+        max_min_prop = self._compute_max_min_ratio(y)
+
+        # Return array with 4 characteristics
+        return np.array([data_size, dim_size, num_classes, max_min_prop])
+
+    def metadata_from_dic(self, data_dic):
+        "Compute Pandas DataFrame with basic dataset metadata."
+        metadata_df = pd.DataFrame(data = np.nan, index = list(data_dic.keys()),
+                                   columns = ["size", "feats", "K", "max_min_ratio"])
+
+        # Iterate through keys
+        for key_ in data_dic.keys():
+            X, y = data_dic[key_]["X"], data_dic[key_]["y"]
+            metadata_df.loc[key_, :] = self._compute_metadata(X, y)
+
+        return metadata_df
 
     def project(self, data, **kwargs):
         return self.projection_method.fit_transform(data)

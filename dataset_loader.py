@@ -6,7 +6,9 @@ from imblearn.datasets import make_imbalance
 import sklearn.datasets as skl_datasets
 
 import numpy as np
+import pandas as pd
 
+import time
 
 def convert_classes_to_range(y):
     "Target might have other format types, so convert to range (0,..., num_classes - 1)"
@@ -33,12 +35,13 @@ def _make_sampling_strategy(y, ratio):
 
     return dict(zip(_values.astype(int), output_counts_))
 
-def _make_imbalance_dic(data_dic, low = 0.0, high = 0.0, seed=2323):
+def _make_imbalance_dic(data_dic, low = 1.0, high = 8.0, seed=2323):
     # Data keys
     skl_keys = [key for key in list(data_dic.keys()) if "skl" in key]
+    all_keys = list(data_dic.keys())
 
     # Make imbalance dataset for those in skl keys
-    for _key in skl_keys:
+    for _key in all_keys:
 
         # Load data
         X, y = data_dic[_key]["X"], data_dic[_key]["y"]
@@ -48,14 +51,40 @@ def _make_imbalance_dic(data_dic, low = 0.0, high = 0.0, seed=2323):
         strategy_ = _make_sampling_strategy(y, ratio_)
 
         # make imbalance dataset
-        new_X, new_y = make_imbalance(X=X, y =y, sampling_strategy = strategy_ ,random_state = 2323)
+        try:
+            new_X, new_y = make_imbalance(X=X, y =y, sampling_strategy = strategy_ ,random_state = seed)
+        except Exception as e:
+            new_X, new_y = X, y
+            print(e)
+            print("Error making data {} imbalanced".format(_key))
+            print("Sampling Error was {} strategy and {} ratio.".format(strategy_, ratio_))
+            print("\n")
+            pass
 
         # Updated
-        data_dic[_key] = {"X": new_X, "y": new_y}
+        data_dic[_key] = {"X": new_X, "y": new_y, "ratio": ratio_}
 
     return data_dic
 
-def data_loader(seed = 2323, low = 0.0, high = 1.0):
+def _convert_targets(data_dic):
+    "Convert y to 0 - num classes format"
+    keys_ = data_dic.keys()
+    output_dic = data_dic.copy()
+
+    for key_ in keys_:
+        output_dic[key_]["y"] = convert_classes_to_range(output_dic[key_]["y"])
+
+    return output_dic
+
+def _make_transformations(dic, low, high):
+    "Apply transformation to datasets"
+
+    return _make_imbalance_dic(_convert_targets(dic), low, high)
+
+def data_loader(seed = 2323, low = 1.0, high = 8.0):
+    "Load and Generate dictionary of data."
+    time_start = time.time()
+
     # Prepare output dic
     output_dic = {}
 
@@ -74,6 +103,18 @@ def data_loader(seed = 2323, low = 0.0, high = 1.0):
         output_dic[data_name] = {"X": X, "y": y}
 
     # Add other datasets
+    glass_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/glass.csv'
+    ecoli_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/ecoli.csv'
+    thyroid_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/new-thyroid.csv'
+    urls = [ecoli_url, thyroid_url, glass_url]
+
+    for dataset_url in urls:
+        # Load data
+        data = pd.read_csv(dataset_url, header = None)
+        X, y = data.values[:, :-1], data.values[:, -1]
+        data_name = dataset_url.split("/")[-1].split(".")[0] + "-multiclass"
+        output_dic[data_name] = {"X": X, "y": y}
+
 
     #1. Sklearn Iris
     iris_X, iris_y = skl_datasets.load_iris(return_X_y=True)
@@ -100,15 +141,9 @@ def data_loader(seed = 2323, low = 0.0, high = 1.0):
     covtype_y = convert_classes_to_range(covtype_y)
     output_dic["covtype_skl"] = {"X": covtype_X, "y": covtype_y}
 
-    #6. KDDCup99 dataset
-    # kddcup_X, kddcup_y = skl_datasets.fetch_kddcup99(random_state = seed, shuffle = True, return_X_y=True)
-    # kddcup_X = kddcup_X[:, [id_ for id_ in list(range(kddcup_X.shape[1])) if (not id_ in [1,2,3])]]
-    # kddcup_y = convert_classes_to_range(kddcup_y)
-    # output_dic["kddcup_skl"] = {"X": kddcup_X, "y": kddcup_y}
+    # Convert to right target format
+    output_dic = _make_transformations(output_dic, low = low, high = high)
 
-    # Load UCI data
-    #7. GHZ indoor dataset
-    output_dic = _make_imbalance_dic(output_dic, low = low, high = high)
-
+    print("Data loaded in {:.2f} minutes".format((time.time() - time_start) / 60))
 
     return output_dic
